@@ -58,49 +58,6 @@ typedef struct { int val; } custom_ty;
 #define CC_LOAD custom_ty, 0.7
 #include "../cc.h"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 list( int ) our_list;
 list( int ) src_list;
 
@@ -366,7 +323,6 @@ void unity_translated_test_list_cleanup( void )
   LIST_CHECK;
 }
 
-/*
 // This needs to test, in particular, that r_end and end iterator-pointers are stable, especially between transition
 // from placeholder to non-placeholder.
 void unity_translated_test_list_iteration( void )
@@ -383,8 +339,8 @@ void unity_translated_test_list_iteration( void )
   // Empty.
 
   // Test fist and last.
-  ALWAYS_ASSERT( first( &our_list ) == end );
-  ALWAYS_ASSERT( last( &our_list ) == r_end );
+  TEST_ASSERT_EQUAL_MESSAGE(first( &our_list ), end, "first element of our_list is not the expected end sentinel");
+  TEST_ASSERT_EQUAL_MESSAGE(last( &our_list ), r_end, "last element of our_list is not the expected r_end sentinel");
 
   int n_iterations = 0;
   for( int *i = first( &our_list ); i != end( &our_list ); i = next( &our_list, i ) )
@@ -397,11 +353,15 @@ void unity_translated_test_list_iteration( void )
   for_each( &our_list, i )
     ++n_iterations;
 
-  ALWAYS_ASSERT( n_iterations == 0 );
+  TEST_ASSERT_EQUAL_MESSAGE(n_iterations, 0, "n_iterations is not the expected 0 after our_list iteration");
 
   // Non-empty.
   for( int i = 0; i < 30; ++i )
-    UNTIL_SUCCESS( push( &our_list, i ) );
+  {
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+  }
   
   for( int *i = first( &our_list ); i != end( &our_list ); i = next( &our_list, i ) )
     ++n_iterations;
@@ -413,15 +373,15 @@ void unity_translated_test_list_iteration( void )
   for_each( &our_list, i )
     ++n_iterations;
 
-  ALWAYS_ASSERT( n_iterations == 120 );
+  TEST_ASSERT_EQUAL_MESSAGE( n_iterations, 120, "n_iterations is not the expected 120 after our_list iteration");
 
   // Test iterator stability.
-  ALWAYS_ASSERT( r_end( &our_list ) == r_end );
-  ALWAYS_ASSERT( end( &our_list ) == end );
+  TEST_ASSERT_EQUAL_MESSAGE( r_end( &our_list ), r_end, "iterator stability of r_end sentinel of our_list is not stable");
+  TEST_ASSERT_EQUAL_MESSAGE( end( &our_list ), end, "iterator stability of end sentinel of our_list is not stable");
 
   // Test fist and last.
-  ALWAYS_ASSERT( *first( &our_list ) == 0 );
-  ALWAYS_ASSERT( *last( &our_list ) == 29 );
+  TEST_ASSERT_EQUAL_MESSAGE( *first( &our_list ), 0, "first element in our_list is not the expected value 0");
+  TEST_ASSERT_EQUAL_MESSAGE( *last( &our_list ), 29, "first element in our_list is not the expected value 29");
 
   LIST_CHECK;
 }
@@ -434,20 +394,29 @@ void unity_translated_test_list_init_clone( void )
 
   // Test init_clone placeholder.
   list( int ) empty_list;
-  UNTIL_SUCCESS( init_clone( &empty_list, &src_list ) );
-  ALWAYS_ASSERT( (void *)empty_list == (void *)&cc_list_placeholder );
+  
+  bool cloneTemp = false;
+  cloneTemp = init_clone( &empty_list, &src_list );
+  TEST_ASSERT_TRUE_MESSAGE(cloneTemp, "Realloc failed to init_clone on our_list and src_list");
+  
+  TEST_ASSERT_EQUAL_MESSAGE((void *)empty_list, (void *)&cc_list_placeholder, "empty_list is not a placeholder list");
 
   // Test init_clone non-placeholder.
-  list( int ) our_list;
+//  list( int ) our_list;
   for( int i = 0; i < 10; ++i )
-    UNTIL_SUCCESS( push( &src_list, i ) );
-  UNTIL_SUCCESS( init_clone( &our_list, &src_list ) ); // Note that because elements are allocated individually,
+  {
+    int *el = NULL;
+    el = push( &src_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on src_list");
+  }
+  cloneTemp = false;
+  cloneTemp = init_clone( &our_list, &src_list );
+  TEST_ASSERT_TRUE_MESSAGE(cloneTemp, "Realloc failed to init_clone on our_list and src_list"); // Note that because elements are allocated individually,
 						       // this loop may never exist if realloc failure rate is set too
 						       // high.
   LIST_CHECK;
   cleanup( &empty_list );
 }
-*/
 
 void unity_translated_test_list_dtors( void )
 {
@@ -466,7 +435,6 @@ void unity_translated_test_list_dtors( void )
     {
         TEST_ASSERT_EQUAL_MESSAGE(element->val, i, "Pushed element has incorrect value");
     }
-    //UNTIL_SUCCESS( push( &our_list2, el ) );
   }
 
   bool erase = true;
@@ -518,13 +486,13 @@ int main( void )
     RUN_TEST(unity_translated_test_list_erase);
     RUN_TEST(unity_translated_test_list_clear);
     RUN_TEST(unity_translated_test_list_cleanup);
-    // RUN_TEST(unity_translated_test_list_iteration);
-    // RUN_TEST(unity_translated_test_list_init_clone);
+    RUN_TEST(unity_translated_test_list_iteration);
+    RUN_TEST(unity_translated_test_list_init_clone);
     RUN_TEST(unity_translated_test_list_dtors);
     #endif
   }
 
-  TEST_ASSERT_EQUAL_size_t_MESSAGE(oustanding_allocs, 0, "There are still outstanding allocs");
+  TEST_ASSERT_EQUAL_MESSAGE(oustanding_allocs, 0, "There are still outstanding allocs");
   printf( "All done.\n" );
   printf( "Simulated realloc failures: %zu\n", simulated_alloc_failures );
 }
