@@ -122,13 +122,13 @@ void tearDown(void)
 #ifdef TEST_LIST
 
 #define LIST_CHECK                                                              \
-TEST_ASSERT_EQUAL_MESSAGE( size( &our_list ), sizeof( expected ) / sizeof( *expected ), "Size of list is not the expected"); \
+TEST_ASSERT_EQUAL_MESSAGE( size( &our_list ), sizeof( expected ) / sizeof( *expected ), "Size of our_list is not the expected"); \
 do                                                                              \
 {                                                                               \
   int *arr = expected;                                                          \
   for_each( &our_list, i )                                                      \
   {                                                                             \
-    TEST_ASSERT_EQUAL_MESSAGE( *i, *arr, "pointer to our list is not the expected");                                                \
+    TEST_ASSERT_EQUAL_MESSAGE( *i, *arr, "pointer to our_list is not the expected");                                                \
     ++arr;                                                                      \
   }                                                                             \
 }while( false )                                                                 \
@@ -150,18 +150,18 @@ void unity_translated_test_list_insert( void )
   // End.
   for( int i = 0; i < 30; ++i )
   {
-    int *el;
+    int *el = NULL;
     el = insert( &our_list, end( &our_list ), 60 + i);
-    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to insert");
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to insert on our_list");
     TEST_ASSERT_EQUAL_MESSAGE( *el,60 + i , "Insert operation value not expected");
   }
 
   // Beginning.
   for( int i = 0; i < 30; ++i )
   {
-    int *el;
+    int *el = NULL;
     el = insert( &our_list, first( &our_list ), 29 - i );
-    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to insert");
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to insert on our_list");
     TEST_ASSERT_EQUAL_MESSAGE( *el, 29 - i, "Insert operation value not expected");
   }
 
@@ -172,15 +172,15 @@ void unity_translated_test_list_insert( void )
 
   for( int i = 0; i < 30; ++i )
   {
-    int *el;
+    int *el = NULL;
     el = insert( &our_list, mid, 30 + i );
-    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to insert");
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to insert on our_list");
     TEST_ASSERT_EQUAL_MESSAGE( *el, 30 + i, "Insert operation value not expected");
   }
 
   LIST_CHECK;
 }
-/*
+
 void unity_translated_test_list_push( void )
 {
   int expected [ 100 ] = {
@@ -198,13 +198,13 @@ void unity_translated_test_list_push( void )
 
   for( int i = 0; i < 100; ++i )
   {
-    int *el;
-    UNTIL_SUCCESS( el = push( &our_list, i ) );
-    ALWAYS_ASSERT( ( *el == i ) );
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+    TEST_ASSERT_EQUAL_MESSAGE( *el , i , "Push operation value not expected" );
   }
 
   LIST_CHECK;
-
 }
 
 void unity_translated_test_list_splice( void )
@@ -212,7 +212,11 @@ void unity_translated_test_list_splice( void )
   // Splice from one list to another.
 
   for( int i = 0; i < 100; ++i )
-    UNTIL_SUCCESS( push( &src_list, i ) );
+  {
+    int *el = NULL;
+    el = push( &src_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on src_list");
+  }
 
   bool splice = true;
   for( int *i = first( &src_list ); i != last( &src_list ); )
@@ -220,19 +224,23 @@ void unity_translated_test_list_splice( void )
     int *next = next( &src_list, i );
 
     if( splice )
-      UNTIL_SUCCESS( splice( &our_list, end( &our_list ), &src_list, i ) );
+    {
+      bool tempAlloc2 = false;
+      tempAlloc2 = splice( &our_list, end( &our_list ), &src_list, i );
+      TEST_ASSERT_TRUE_MESSAGE(tempAlloc2, "Realloc failed to splice");
+    }
 
     splice = !splice;
     i = next;
   }
 
-  ALWAYS_ASSERT( size( &our_list ) == 50 );
+  TEST_ASSERT_EQUAL_MESSAGE( size( &our_list ), 50, "Size of our_list after splice is not expected");
   for( int *i = first( &our_list ), j = 0; i != last( &our_list ); i = next( &our_list, i ), j += 2 )
-    ALWAYS_ASSERT( *i == j );
+    TEST_ASSERT_EQUAL_MESSAGE( *i, j, "Values in our_list are not the expected" );
 
-  ALWAYS_ASSERT( size( &src_list ) == 50 );
+  TEST_ASSERT_EQUAL_MESSAGE( size( &src_list ), 50, "Size of src_list after Splice is not expected");
   for( int *i = first( &src_list ), j = 1; i != last( &src_list ); i = next( &src_list, i ), j += 2 )
-    ALWAYS_ASSERT( *i == j );
+    TEST_ASSERT_EQUAL_MESSAGE( *i, j, "Values in src_list are not the expected");
 
   // Splice within the same list.
 
@@ -241,14 +249,16 @@ void unity_translated_test_list_splice( void )
   {
     int *prev = prev( &our_list, i );
 
-    UNTIL_SUCCESS( splice( &our_list, end( &our_list ), &our_list, i ) );
+    bool tempAlloc3 = false;
+    tempAlloc3 = splice( &our_list, end( &our_list ), &our_list, i );
+    TEST_ASSERT_TRUE_MESSAGE(tempAlloc3, "Realloc failed to splice on our_list");
 
     i = prev;
   }
 
-  ALWAYS_ASSERT( size( &our_list ) == 50 );
+  TEST_ASSERT_EQUAL_MESSAGE(size( &our_list ), 50, "Size of our_list after splice is not expected");
   for( int *i = first( &our_list ), j = 98; i != last( &our_list ); i = next( &our_list, i ), j -= 2 )
-    ALWAYS_ASSERT( *i == j );
+    TEST_ASSERT_EQUAL_MESSAGE( *i, j, "Values in our_list are not the expected" );
 
 }
 
@@ -268,7 +278,11 @@ void unity_translated_test_list_erase( void )
   };
 
   for( int i = 0; i < 100; ++i )
-    UNTIL_SUCCESS( push( &our_list, i ) );
+  {
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+  }
 
   bool erase = true;
   for( int *i = first( &our_list ); i != end( &our_list ); )
@@ -286,7 +300,6 @@ void unity_translated_test_list_erase( void )
 
 void unity_translated_test_list_clear( void )
 {
-
   int expected [ 30 ] = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
     10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -295,19 +308,27 @@ void unity_translated_test_list_clear( void )
 
   // Empty.
   clear( &our_list );
-  ALWAYS_ASSERT( size( &our_list ) == 0 );
+  TEST_ASSERT_EQUAL_MESSAGE(size( &our_list ), 0, "Clear function failed to clear our_list");
 
   // Non-empty.
   for( int i = 0; i < 30; ++i )
-    UNTIL_SUCCESS( push( &our_list, i ) );
-  ALWAYS_ASSERT( size( &our_list ) == 30 );
+  {
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+  }
+  TEST_ASSERT_EQUAL_MESSAGE(size( &our_list ), 30, "Size after push on our_list is not expected");
 
   clear( &our_list );
-  ALWAYS_ASSERT( size( &our_list ) == 0 );
+  TEST_ASSERT_EQUAL_MESSAGE(size( &our_list ), 0, "Clear function failed to clear our_list");
 
   // Test use.
   for( int i = 0; i < 30; ++i )
-    UNTIL_SUCCESS( push( &our_list, i ) );
+  {
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+  }
   LIST_CHECK;
 }
 
@@ -321,22 +342,31 @@ void unity_translated_test_list_cleanup( void )
 
   // Empty.
   cleanup( &our_list );
-  ALWAYS_ASSERT( (void *)our_list == (void *)&cc_list_placeholder );
+  TEST_ASSERT_EQUAL_MESSAGE( (void *)our_list, (void *)&cc_list_placeholder, "Cleanup function failed to turn our_list into a list_placeholder" );
 
   // Non-empty.
   for( int i = 0; i < 30; ++i )
-    UNTIL_SUCCESS( push( &our_list, i ) );
-  ALWAYS_ASSERT( size( &our_list ) == 30 );
+  {
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+  }
+  TEST_ASSERT_EQUAL_MESSAGE(size( &our_list ), 30, "Size of our_list after push is not expected");
   cleanup( &our_list );
-  ALWAYS_ASSERT( size( &our_list ) == 0 );
-  ALWAYS_ASSERT( (void *)our_list == (void *)&cc_list_placeholder );
+  TEST_ASSERT_EQUAL_MESSAGE(size( &our_list ), 0, "Size of our_list after cleanup is not expected");
+  TEST_ASSERT_EQUAL_MESSAGE((void *)our_list, (void *)&cc_list_placeholder, "Cleanup function failed to turn our_list into a list_placeholder");
 
   // Test use.
   for( int i = 0; i < 30; ++i )
-    UNTIL_SUCCESS( push( &our_list, i ) );
+  {
+    int *el = NULL;
+    el = push( &our_list, i );
+    TEST_ASSERT_NOT_NULL_MESSAGE(el, "Realloc failed to push on our_list");
+  }
   LIST_CHECK;
 }
 
+/*
 // This needs to test, in particular, that r_end and end iterator-pointers are stable, especially between transition
 // from placeholder to non-placeholder.
 void unity_translated_test_list_iteration( void )
@@ -412,11 +442,12 @@ void unity_translated_test_list_init_clone( void )
   for( int i = 0; i < 10; ++i )
     UNTIL_SUCCESS( push( &src_list, i ) );
   UNTIL_SUCCESS( init_clone( &our_list, &src_list ) ); // Note that because elements are allocated individually,
-                                                       // this loop may never exist if realloc failure rate is set too
-                                                       // high.
+						       // this loop may never exist if realloc failure rate is set too
+						       // high.
   LIST_CHECK;
   cleanup( &empty_list );
 }
+*/
 
 void unity_translated_test_list_dtors( void )
 {
@@ -428,7 +459,14 @@ void unity_translated_test_list_dtors( void )
   for( int i = 0; i < 100; ++i )
   {
     custom_ty el = { i };
-    UNTIL_SUCCESS( push( &our_list2, el ) );
+    custom_ty *element = NULL;
+    element = push( &our_list2, el);
+    TEST_ASSERT_NOT_NULL_MESSAGE(element, "Realloc failed to push on our_list");
+    if (element != NULL) 
+    {
+        TEST_ASSERT_EQUAL_MESSAGE(element->val, i, "Pushed element has incorrect value");
+    }
+    //UNTIL_SUCCESS( push( &our_list2, el ) );
   }
 
   bool erase = true;
@@ -450,13 +488,19 @@ void unity_translated_test_list_dtors( void )
   for( int i = 0; i < 100; ++i )
   {
     custom_ty el = { i };
-    UNTIL_SUCCESS( push( &our_list2, el ) );
+    custom_ty *element = NULL;
+    element = push( &our_list2, el);
+    TEST_ASSERT_NOT_NULL_MESSAGE(element, "Realloc failed to push on our_list");
+    if (element != NULL) 
+    {
+        TEST_ASSERT_EQUAL_MESSAGE(element->val, i, "Pushed element has incorrect value");
+    }
   }
 
   cleanup( &our_list2 );
   check_dtors_arr();
 }
-*/
+
 #endif
 
 int main( void )
@@ -469,14 +513,14 @@ int main( void )
     #ifdef TEST_LIST
     // list, init, and size are tested implicitly.
     RUN_TEST(unity_translated_test_list_insert);
-    // RUN_TEST(unity_translated_test_list_push);
-    // RUN_TEST(unity_translated_test_list_splice);
-    // RUN_TEST(unity_translated_test_list_erase);
-    // RUN_TEST(unity_translated_test_list_clear);
-    // RUN_TEST(unity_translated_test_list_cleanup);
+    RUN_TEST(unity_translated_test_list_push);
+    RUN_TEST(unity_translated_test_list_splice);
+    RUN_TEST(unity_translated_test_list_erase);
+    RUN_TEST(unity_translated_test_list_clear);
+    RUN_TEST(unity_translated_test_list_cleanup);
     // RUN_TEST(unity_translated_test_list_iteration);
     // RUN_TEST(unity_translated_test_list_init_clone);
-    // RUN_TEST(unity_translated_test_list_dtors);
+    RUN_TEST(unity_translated_test_list_dtors);
     #endif
   }
 
